@@ -17,17 +17,51 @@ async function checkAdmin(req: Request) {
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await checkAdmin(req))) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  const { id } = await params;
+// ✅ GET (ESTO SOLUCIONA TU ERROR 405)
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  try {
+    const { id } = params;
+
+    const usuario = await db
+      .select()
+      .from(usuarios)
+      .where(eq(usuarios.id, Number(id)));
+
+    return NextResponse.json(usuario[0] || {});
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error al obtener usuario" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  if (!(await checkAdmin(req))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const { id } = params;
+
   await db.delete(usuarios).where(eq(usuarios.id, Number(id)));
+
   return NextResponse.json({ ok: true });
 }
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await checkAdmin(req))) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  const { id } = await params;
+// PATCH
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  if (!(await checkAdmin(req))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const { id } = params;
   const body = await req.json();
-  await db.update(usuarios).set({ activo: body.activo }).where(eq(usuarios.id, Number(id)));
+
+  await db
+    .update(usuarios)
+    .set({ activo: body.activo })
+    .where(eq(usuarios.id, Number(id)));
+
   return NextResponse.json({ ok: true });
 }
